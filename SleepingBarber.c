@@ -9,6 +9,7 @@
 #define MAX_CUSTOMERS 25
 //Number of chairs
 #define NUM_CHAIRS 10
+
 // Function prototypes…
 void *customer(void *num);
 void *barber(void *);
@@ -18,23 +19,11 @@ void timearrive(int time);
 
 // Define the semaphores.
 
-// waitingRoom Limits the # of customers allowed
-// to enter the waiting room at one time.
 sem_t waitingRoom;
-
-// barberChair ensures mutually exclusive access to
-// the barber chair.
 sem_t barberChair;
-
-// barberSleep is used to allow the barber to sleep
-// until a customer arrives.
 sem_t barberSleep;
-
-// hairCut is used to make the customer to wait until
-// the barber is done cutting his/her hair.
 sem_t hairCut;
 
-// Stop program when all customers leave the barber
 int allDone = 0;
 
 int main(int argc, char *argv[]) {
@@ -49,7 +38,7 @@ int main(int argc, char *argv[]) {
   numChairs = NUM_CHAIRS;
   // Make sure the number of threads is less than the number of customers 
   if (numCustomers > MAX_CUSTOMERS) {
-  printf("The maximum number of Customers is %d.\n", MAX_CUSTOMERS);
+  printf("The max number of Customers is %d.\n", MAX_CUSTOMERS);
   exit(-1);
   }
 
@@ -81,50 +70,9 @@ int main(int argc, char *argv[]) {
 
   // When all of the customers are finished, finish the barber
   allDone = 1;
-  sem_post(&barberSleep); // Wake the barber so he will exit.
+  sem_post(&barberSleep); // Wake the barber 
   pthread_join(btid,NULL);
   return 0;
-}
-
-void *customer(void *number) {
-  int num = *(int *)number;
-  int chairs;
-  int wake;
-  // Leave for the shop and take some random amount of
-  printf("Customer %d is going to the barber shop.\n", num);
-  // random time to arrive (0 - 3 seg).
-  sleep(rand()%3);
-  printf("Customer %d arrived at barber shop.\n", num);
-
-  // Wait for space to open up in the waiting room
-  if (sem_trywait(&waitingRoom) == -1) {
-      printf("Waiting room full. Customer %d is leaving.\n",num);
-      return 0;
-  }
-  sem_getvalue(&waitingRoom,&chairs);
-  printf("The number of empty chairs is %d\n",chairs);
-  printf("Customer %d entering waiting room.\n", num);
-  
-  // Wait for the barber chair to become free.
-  sem_wait(&barberChair);
-
-  // The chair is free so give up your spot in the
-  // waiting room.
-  sem_post(&waitingRoom);
-  
-  // Wake up the barber if it is sleeping
-  sem_getvalue(&barberSleep,&wake);
-  if(wake==0){
-      printf("Customer %d waking the barber.\n", num);
-  sem_post(&barberSleep);
-  }
-
-  // Wait for the barber to finish cutting your hair.
-  sem_wait(&hairCut);
-
-  // Give up the chair.
-  sem_post(&barberChair);
-  printf("Customer %d leaving barber shop.\n", num);
 }
 
 void *barber(void *junk) {
@@ -153,6 +101,49 @@ void *barber(void *junk) {
     }
   }
 }
+
+void *customer(void *number) {
+  int num = *(int *)number;
+  int chairs;
+  int wake;
+  // Leave for the shop and take some random amount of
+  printf("Customer %d is going to the barber shop.\n", num);
+  // random time to arrive (0 - 3 seg).
+  sleep(rand()%3);
+  printf("Customer %d arrived at barber shop.\n", num);
+
+  // Wait for space to open up in the waiting room
+  if (sem_trywait(&waitingRoom) == -1) {
+      printf("Waiting room is full. Customer %d is leaving.\n",num);
+      return 0;
+  }
+  sem_getvalue(&waitingRoom,&chairs);
+  printf("The number of empty chairs is %d\n",chairs);
+  printf("Customer %d entering waiting room.\n", num);
+  
+  // Wait for the barber chair to become free.
+  sem_wait(&barberChair);
+
+  // The chair is free so give up your spot in the
+  // waiting room.
+  sem_post(&waitingRoom);
+  
+  // Wake up the barber if it is sleeping
+  sem_getvalue(&barberSleep,&wake);
+  if(wake==0){
+      printf("Customer %d waking the barber.\n", num);
+  sem_post(&barberSleep);
+  }
+
+  // Wait for the barber to finish cutting your hair.
+  sem_wait(&hairCut);
+
+  // Give up the chair.
+  sem_post(&barberChair);
+  printf("Customer %d leaving barber shop.\n", num);
+}
+
+
 
 //cutting hair time for each type there is a diferent waitng time
 void cuttime(int num){
